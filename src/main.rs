@@ -95,3 +95,29 @@ async fn main() {
 
     println!("[!] Bruteforce complete")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const VALID_WORDLIST: &str = "tests/assets/test_wordlist.txt";
+
+    #[tokio::test]
+    async fn test_parse_wordlist() {
+        let (tx, mut rx): (Sender<String>, Receiver<String>) = mpsc::channel(100);
+        let producer = tokio::spawn(async move {
+            match parse_wordlist(VALID_WORDLIST, tx).await {
+                Ok(..) => (),
+                Err(err) => eprintln!("[-] parse_wordlist failed: {}", err),
+            }
+        });
+
+        let mut files: Vec<String> = vec![];
+        while let Some(filename) = rx.recv().await {
+            files.push(filename)
+        }
+
+        assert!(producer.await.is_ok());
+        assert_eq!(files.len(), 10);
+    }
+}
